@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  
+  <h5 class="center-align">Cadastro</h5>
+  <div class="row">
+    <form class="col s12 m12 l12" method="POST" action="{% url 'cadastro' %}">
+      {% csrf_token %}
+      <div class="row">
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">person_pin</i>
+          <input type="text" name="nome" minlength="1" maxlength="20" class="validate" required>
+          <label>Nome</label>
+        </div>
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">person</i>
+          <input type="text" name="usuario" minlength="1" maxlength="20" class="validate" required>
+          <label>Login</label>
+        </div>
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">email</i>
+          <input type="text" name="email" minlength="1" maxlength="50" class="validate" required>
+          <label>Email</label>
+        </div>
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">dialpad</i>
+          <input type="password" name="senha" minlength="1" maxlength="20" class="validate" required>
+          <label>Senha</label>
+        </div>
+        <div class="input-field col s5 m4 l3 offset-s4 offset-m5 offset-l5">
+           <button class="btn waves-effect waves-light red darken-2" type="submit" name="action">Cadastrar<i class="material-icons right">send</i></button>
+           <!--<button class="btn waves-effect waves-light red darken-2" type="hidden" name="next" value="{{ next }}"><i class="material-icons right">send</i></button>-->
+        </div>
+      </div>
+    </form>
+  </div>
+  <script type="text/javascript">
+    document.getElementById('recentralizar').style.display='none';
+    document.getElementById('bmenu').style.display='none';
+  </script>
+
+ 
+  
+{% endblock %}

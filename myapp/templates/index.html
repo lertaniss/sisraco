@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% block content %}
+	<div id="map" style="position: absolute; height: 100%; width: 100%;"></div>
+	<script src='https://d3js.org/d3.v3.min.js' charset='utf-8'></script>
+	<script type="text/javascript">
+		var x, y;
+		var qtd_bus = 0;
+
+		$(document).ready(function(){
+			$("#bmenu").sideNav();
+		});
+
+		mapboxgl.accessToken = 'pk.eyJ1Ijoidml0b3IyMDAyIiwiYSI6ImNqc2c4bGc3YTEzeTMzeXRocjcwM2dtcHAifQ.--CXrRClPMLyE5Cdg8VgOg';
+		var map = new mapboxgl.Map({
+			container: 'map', // container id
+			style: 'mapbox://styles/mapbox/streets-v11',
+			center: [-37.0922198, -6.460246799999999], // starting position
+			zoom: 12, // starting zoom
+			minZoom: 12,
+			maxZoom: 18
+		});
+
+		function error(err) {
+	  		console.warn('ERRO(' + err.code + '): ' + err.message);
+		}
+
+		options = {
+	  		enableHighAccuracy: true,
+	  		timeout: 5000,
+	  		maximumAge: 0
+		};
+
+		function success(pos) {
+			 var crd = pos.coords;
+			 x =  crd.longitude;
+			 y = crd.latitude;
+			 map.getSource('ponto').setData({
+			 	"type": "FeatureCollection",
+				"features": [{
+					"type": "Feature",
+					"geometry": {
+						"type": "Point",
+						"coordinates": [x, y]
+					}
+				}]
+			 });
+		};
+		
+		map.on('load', function(){
+			navigator.geolocation.getCurrentPosition(function (pos){
+				var crd = pos.coords;
+				x =  crd.longitude;
+				y = crd.latitude;
+				mapa();
+			}, error, options);
+			navigator.geolocation.watchPosition(success, error, options);
+			rota_load();
+		});
+
+		function rota_load(){
+			window.setTimeout("rota()", 1000);
+		}
+
+		var size = 120;
+		var pulsingDot = {
+			width: size,
+			height: size,
+			data: new Uint8Array(size * size * 4),
+
+			onAdd: function() {
+				var canvas = document.createElement('canvas');
+				canvas.width = this.width;
+				canvas.height = this.height;
+				this.context = canvas.getContext('2d');
+			},
+
+			render: function() {
+				var duration = 1000;
+				var t = (performance.now() % duration) / duration;
+
+				var radius = size / 2 * 0.3;
+				var outerRadius = size / 2 * 0.7 * t + radius;
+				var context = this.context;
+
+				// draw outer circle
+				context.clearRect(0, 0, this.width, this.height);
+				context.beginPath();
+				context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2);
+				context.fillStyle = 'rgba(0, 127, 255,' + (1 - t) + ')';
+				context.fill();
+
+				// draw inner circle
+				context.beginPath();
+				context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2);
+				context.fillStyle = 'rgba(0, 127, 255, 1)';
+				context.strokeStyle = 'white';
+				context.lineWidth = 2 + 4 * (1 - t);
+				context.fill();
+				context.stroke();
+
+				// update this image's data with data from the canvas
+				this.data = context.getImageData(0, 0, this.width, this.height).data;
+
+				// keep the map repainting
+				map.triggerRepaint();
+
+			// return `true` to let the map know that the image was updated
+				return true;
+			}
+		};
+		
+		function mapa() {
+			map.addImage('pulsing-dot', pulsingDot, { pixelRatio: 2 });
+			map.addSource('ponto', {type: 'geojson', 
+				data: {
+					"type": "FeatureCollection",
+					"features": [{
+						"type": "Feature",
+						"geometry": {
+							"type": "Point",
+							"coordinates": [x, y]
+						}
+					}]
+				}
+			});
+			map.addLayer({
+				"id": "points",
+				"type": "symbol",
+				"source": "ponto",
+				"layout": {
+					"icon-image": "pulsing-dot"
+				}
+			});
+			map.flyTo({
+				center:[x, y],
+				zoom: 14
+			});
+		}
+		
+		var cores = ["red", "yellow", "purple", "blue", "green", "grey", "orange", "pink", "violet", "brown"];
+		var cor = -1;
+		var imagem;
+		map.loadImage("static/myapp/images/busao.png", function(error, image) {
+			if (error) throw error;
+			imagem = image;
+		});
+
+		var imageData;
+		var codigo;
+		var caminho;
+		function rota(){
+			d3.json("http://127.0.0.1:8000/geojson",  function(err, data) {
+				console.log(data);
+				caminho = data;
+
+				if (err) throw err;
+				//var coordinates = data.coordinates;
+				//data.coordinates = [coordinates[0]];
+				for (var i = 0; i < data.coordinates.length; i++) {
+					if (data.coordinates[i].length!=0) {
+							cor++;
+							qtd_bus++;
+							if (cor==10) cor=0;
+							map.addSource('trace'+i+'', { type: 'geojson', data:{"type": "LineString", "coordinates": data.coordinates[i]}});
+							console.log(data.coordinates[i]);
+							console.log(i);
+							map.addLayer({
+								"id": "trace"+i+"",
+								"type": "line",
+								"source": "trace"+i+"",
+								"paint": {
+									"line-color": cores[cor],
+									"line-opacity": 1.0,
+									"line-width": 5
+								}
+							});
+							imageData = data.coordinates[i][data.coordinates[i].length - 1];
+							map.addImage('imagem_bus'+i+'', imagem);
+							map.addSource('source_bus'+i+'', {type: 'geojson', data: {"type": "Point", "coordinates": imageData}});
+							map.addLayer({
+								"id": "img_bus"+i,
+								"type": "symbol",
+								"source": "source_bus"+i+"",
+								"layout": {
+									"icon-image": "imagem_bus"+i+"",
+									"icon-size": 0.08		
+								}
+							});
+							
+							map.on('click', "img_bus"+i,function (e) {
+								id = e.features[0].layer.id;
+								mostrar(e.features[0].layer.id);
+							});
+						
+					}
+				}
+				
+				map.jumpTo({'zoom': 13 });
+				map.setPitch(50);
+			
+			 	window.setInterval(function(){
+			 		rota_review();
+			 	},5000);
+
+			
+			});
+		}
+		var mostra = 0; //diz se o user ta acompanhando um busao
+		$('#map').on('click', function(){
+			if (mostra==1) {	
+				document.getElementById('footer').style.display = 'none';
+				mostra=0;
+				for (var i = 0; i < qtd_paradas; i++) {
+					map.removeLayer('parada'+i);
+					map.removeSource('parada'+i);
+				}
+				map.removeLayer('rota');
+				map.removeSource('rota');
+				qtd_paradas = 0;
+				mostra=0;
+			}
+		});
+		var v = 0;
+		var qtd_paradas = 0;
+		function distanciaPO(idOnibus){
+			$.ajaxSetup({async: false});
+			var distanciaf = 0;
+			$.get( "http://127.0.0.1:8000/tb_paradas", function(paradas){
+				var s = paradas.filter(function( obj ) {
+		  			return obj.par_oni_codigo == idOnibus;
+				});
+				var menor = 0;
+				var par = -1;
+				var x2 = parseFloat(x);
+				var y2 = parseFloat(y);
+				for(var i = 0; i < s.length;i++){
+					var d = medirDistancia(parseFloat(s[i].par_y),parseFloat(s[i].par_x), y2, x2);
+					if(i == 0){
+						menor = d;
+						par = i;
+					}else if(d < menor){
+						menor = d;
+						par = i;
+					}
+				}
+				var distancia = parseFloat(s[par].par_distancia) - 0;
+				
+				if(distancia < 0){
+					$.get( "http://127.0.0.1:8000/tb_distanciasR", function(distanciasr){
+						var distanciaTotaldaRota = distanciasr.filter(function( obj ) {
+		  					return obj.dis_oni_codigo == idOnibus;
+						});
+						var distanciaP = 0-s[par].par_distancia;
+						distanciaP = distanciaTotaldaRota[0].dis_distancia - distanciaP;
+
+						distanciaf = distanciaP;
+					});
+				}else{
+					distanciaf = distancia;
+				}
+			});
+			$.ajaxSetup({async: true});
+			return distanciaf;
+		}
+		function mostrar(id){
+				id = id.substr(id.indexOf('s')+1, id.length);
+				codigo = id;
+				$.get( "/tb_coordenadas", function( data ){
+					var corDoonibus = data.filter(function( obj ) {
+  						return obj.cor_oni_codigo == id;
+					});
+					//v = data[0].cor_velocidade[id];
+					
+					var distancia = distanciaPO(id);
+					document.getElementById('footer').style.display = 'block';
+					document.getElementById('footer').innerHTML = "Código: " + id + " / Velocidade: " + 0 + " Km/h:"+distancia;
+				});
+				if (mostra==0) {
+					$.get( "/tb_paradas", function( data ) {
+						var par = data.filter(function( obj ) {
+  							return obj.par_oni_codigo == id;
+						});
+						mostra = 1;
+
+						for (var i = 0; i < par.length; i++) {
+							qtd_paradas++;
+							map.addSource('parada'+i, {type: 'geojson', data: {"type": "Point", "coordinates": [par[i].par_x, par[i].par_y]}});
+							map.addLayer({
+								"id": "parada"+i,
+								"type": "circle",
+								"source": "parada"+i,
+								'paint': {
+									'circle-radius': 10,
+									'circle-color': '#007cbf'
+								}
+							});
+						}
+					});
+					d3.json("/tb_rotas",  function(err, data) {	
+						var r = data.filter(function( obj ) {
+  							return obj.rot_oni_codigo == id;
+						});
+						var rota = [];
+						for (var i = 0; i < r.length; i++) {
+						 	rota[i]=[r[i].rot_x, r[i].rot_y];
+						}
+						console.log(rota); 
+						map.addSource('rota', { type: 'geojson', data:{"type": "LineString", "coordinates": rota}});
+						map.addLayer({
+							"id": "rota",
+							"type": "line",
+							"source": "rota",
+							"paint": {
+								"line-color": "black",
+								"line-opacity": 1.0,
+								"line-width": 5
+							}
+						});
+					});
+
+				}else{
+					mostra=0;
+					for (var i = 0; i < qtd_paradas; i++) {
+						map.removeLayer('parada'+i);
+						map.removeSource('parada'+i);
+					}
+					map.removeLayer('rota');
+					map.removeSource('rota');
+					qtd_paradas = 0;
+					$.get( "/tb_paradas", function( data ) {
+						var par = data.filter(function( obj ) {
+  							return obj.par_oni_codigo == id;
+						});
+						mostra = 1;
+
+						for (var i = 0; i < par.length; i++) {
+							qtd_paradas++;
+							map.addSource('parada'+i, {type: 'geojson', data: {"type": "Point", "coordinates": [par[i].par_x, par[i].par_y]}});
+							map.addLayer({
+								"id": "parada"+i,
+								"type": "circle",
+								"source": "parada"+i,
+								'paint': {
+									'circle-radius': 10,
+									'circle-color': '#007cbf'
+								}
+							});
+						}
+					});
+					d3.json("/tb_rotas",  function(err, data) {	
+						var r = data.filter(function( obj ) {
+  							return obj.rot_oni_codigo == id;
+						});
+						var rota = [];
+						for (var i = 0; i < r.length; i++) {
+						 	rota[i]=[r[i].rot_x, r[i].rot_y];
+						}
+						console.log(rota); 
+						map.addSource('rota', { type: 'geojson', data:{"type": "LineString", "coordinates": rota}});
+						map.addLayer({
+							"id": "rota",
+							"type": "line",
+							"source": "rota",
+							"paint": {
+								"line-color": "black",
+								"line-opacity": 1.0,
+								"line-width": 5
+							}
+						});
+					});
+				}
+		}
+		function rota_review(){
+			d3.json("/geojson",  function(err, data) {
+				for (var i = 0; i < data.coordinates.length; i++) {
+					if (data.coordinates[i].length!=0) {
+						imageData = data.coordinates[i][data.coordinates[i].length - 1];
+						if (map.getSource('trace'+i)==null) {
+							cor++;
+							qtd_bus++;
+							if (cor==10) {cor=0;}
+							map.addSource('trace'+i+'', { type: 'geojson', data:{ "type": "LineString", "coordinates": data.coordinates[i]}});
+							map.addLayer({
+								"id": "trace"+i+"",
+								"type": "line",
+								"source": "trace"+i+"",
+								"paint": {
+									"line-color": cores[cor],
+									"line-opacity": 1.0,
+									"line-width": 5
+								}
+							});
+							map.addImage('imagem_bus'+i+'', imagem);
+							map.addSource('source_bus'+i+'', {type: 'geojson', data: {"type": "Point", "coordinates": imageData}});
+							map.addLayer({
+								"id": "img_bus"+i+"",
+								"type": "symbol",
+								"source": "source_bus"+i+"",
+								"layout": {
+									"icon-image": "imagem_bus"+i+"",
+									"icon-size": 0.08	
+								}
+							});
+							map.on('click', "img_bus"+i,function (e) {
+								id = e.features[0].layer.id;
+								mostrar(e.features[0].layer.id);
+							});
+						}else{
+							map.getSource('trace'+i+'').setData({"type": "LineString", "coordinates": data.coordinates[i]});
+							map.getSource('source_bus'+i+'').setData({"type": "Point", "coordinates": imageData});
+						}
+
+					}
+					
+				}
+			});
+		}
+		function medirDistancia(lat1,lon1,lat2,lon2) {
+			var R = 6371; // km 
+			//has a problem with the .toRad() method below.
+			var x1 = lat2-lat1;
+			var dLat = x1.toRad();  
+			var x2 = lon2-lon1;
+			var dLon = x2.toRad();  
+			var a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+			                Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) * 
+			                Math.sin(dLon/2) * Math.sin(dLon/2);  
+			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+			var d = R * c; 
+			return d*1000;
+		}
+		Number.prototype.toRad = function() {
+   				return this * Math.PI / 180;
+		}
+		function recentralizar(){
+			map.flyTo({
+				center:[-37.0622198, -6.460246799999999],
+				zoom: 12
+			});
+		}
+
+	</script>
+{% endblock %}
