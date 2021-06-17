@@ -27,7 +27,7 @@ SECRET_KEY = 'q1oymv03h_@3q1t%40x+tb(v+v8^daq!wmp7g$#=+osdg@*i62'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.0.106', '444d919d.ngrok.io']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -120,8 +120,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
-ALLOWED_HOSTS = ['sisraco.herokuapp.com']
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
