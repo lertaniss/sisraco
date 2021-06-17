@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     url(r'^$', views.principal, name='principal'),
     url(r'^tb_coordenadas', views.CoordenadasList.as_view(), name='banco'),
-    path('coordenadasUpdate/', views.coordenadasUpdate, name="coordenadas_update"),
+    path('coordenadasUpdate', views.coordenadasUpdate, name="coordenadas_update"),
     url(r'^geojson', views.gerar, name='geojson'),
     url(r'^transmitir', views.transmitir, name='transmitir'),
     url(r'^motorista', views.motorista, name='motorista'),
