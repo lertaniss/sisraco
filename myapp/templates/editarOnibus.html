@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+
+  
+  <h5 class="center-align">Editar ônibus</h5>
+  <div class="row">
+    <form class="col s12 m12 l12" method="POST">
+      {% csrf_token %}
+      <div class="row">
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">directions_bus</i>
+          <input type="text" name="oni_nome" minlength="5" value ="{{onibus.oni_nome}}" maxlength="50" class="validate" required>
+          <label>Nome do ônibus</label>
+        </div>
+        <div class="input-field col s5 m4 l3 offset-s4 offset-m5 offset-l5">
+           <button class="btn waves-effect waves-light red darken-2" type="submit" name="action">Editar<i class="material-icons right">send</i></button>
+           <!--<button class="btn waves-effect waves-light red darken-2" type="hidden" name="next" value="{{ next }}"><i class="material-icons right">send</i></button>-->
+        </div>
+      </div>
+    </form>
+  </div>
+  <script type="text/javascript">
+    document.getElementById('recentralizar').style.display='none';
+  </script>
+{% endblock %}

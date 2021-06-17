@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+	
+	<h5 class="center-align">Paradas</h5>
+	<table class="highlight">
+		<tr bgcolor="#F2F2F2">
+			<th>CÓDIGO</th>
+			<th>DESCRIÇÃO</th>
+			<th>COORDENADA X</th>
+			<th>COORDENADA Y</th>
+			<th>AÇÕES</th>
+		</tr>
+		{% for parada in paradas %}
+		<tr>
+			<td>{{ parada.par_codigo}}</td>
+			<td>{{ parada.par_nome}}</td>
+			<td>{{ parada.par_x}}</td>
+			<td>{{ parada.par_y}}</td>
+			<td><a href="editarParada/{{parada.par_codigo}}"><i class="material-icons left">edit</i></a><a  onclick= "return confirm('Deseja realmente excluir esse produto?');" href=""><i class="material-icons left">delete</i></a></td>
+		</tr>
+		{% endfor %}
+	</table>
+	<script type="text/javascript">
+		document.getElementById('recentralizar').style.display='none';
+	</script>
+	
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  {% if form.errors %}
+    <p>Your username and password didn't match. Please try again.</p>
+  {% endif %}
+  
+  {% if next %}
+    {% if user.is_authenticated %}
+      <p>Your account doesn't have access to this page. To proceed,
+      please login with an account that has access.</p>
+    {% else %}
+      <p>Please login to see this page.</p>
+    {% endif %}
+  {% endif %}
+  
+  
+  <h5 class="center-align">Login</h5>
+  <div class="row">
+    <form class="col s12 m12 l12" method="POST" action="{% url 'login' %}">
+      {% csrf_token %}
+      <div class="row">
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">person</i>
+          <input type="text" name="username" minlength="1" maxlength="50" class="validate" required>
+          <label>Login</label>
+        </div>
+        <div class="input-field col s12 m8 l4 offset-m2 offset-l4">
+          <i class="material-icons prefix">dialpad</i>
+          <input type="password" name="password" minlength="1" maxlength="20" class="validate" required>
+          <label>Senha</label>
+        </div>
+        <div class="input-field col s5 m4 l3 offset-s4 offset-m5 offset-l5">
+           <button class="btn waves-effect waves-light red darken-2" type="submit" name="action">Logar<i class="material-icons right">send</i></button>
+           <!--<button class="btn waves-effect waves-light red darken-2" type="hidden" name="next" value="{{ next }}"><i class="material-icons right">send</i></button>-->
+           <p><a href="{% url 'password_reset' %}">Esqueceu sua senha?</a></p>
+        </div>
+      </div>
+    </form>
+  </div>
+  <a id="aviso" class="waves-effect waves-light btn btn-floating red darken-2" style="display: none;"><i class="material-icons">menu</i></a>
+  <div class="tap-target red darken-2" data-activates="aviso">
+    <div class="tap-target-content">
+      <h5>Aviso</h5>
+      {% if mensagem %}
+      <p>{{mensagem}}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% if mensagem %}
+      <script>$('.tap-target').tapTarget('open');</script>
+  {% endif %}
+  
+  <script type="text/javascript">
+    document.getElementById('recentralizar').style.display='none';
+    document.getElementById('bmenu').href="{% url 'cadastrar' %}";
+    document.getElementById('bmenu').id="cadastrar";
+    document.getElementById('cadastrar').innerHTML='<i class="material-icons">person_add</i>';
+
+  </script>
+
+ 
+  
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% block content %}
+{% csrf_token %}
+	<div id="map" style="position: absolute; height: 100%; width: 100%;"></div>
+	{% if rotaview %}
+		<footer id="footer" class="page-footer red darken-2 center-align" style="position: fixed; width: 100%; bottom: 0; z-index: 100000000;">
+	    <div class="footer-copyright">
+	        <div class="container row">
+		          <a class="waves-effect waves-light btn red darken-1 col s5 l2 offset-s1 offset-l4" id="trans" onclick="transmitir();"><i class="material-icons left">cast</i>Iniciar</a>
+		          <a class="waves-effect waves-light btn red darken-1 col l2" id="marcar" onclick="parada();" style="display: none;"><i class="material-icons left">local_parking</i>Parada</a>
+		          <a href="{% url 'rota' %}" onclick="return confirm('Deseja realemente encerrar e salvar a gravação de rota?');" class="waves-effect waves-light btn red darken-1 col l2 offset-s3" id="final" onclick="transmitir();" style="display: none;"><i class="material-icons left">stop</i>Encerrar</a>
+	      		</div>
+	        
+	    </div>
+	 </footer>
+	{% else %}
+		<div class="row" style="position: absolute; right: 0">
+			<a class="waves-effect waves-light btn red darken-2 col" onclick="return confirm('Você realmente deseja encerrar a gravação e assim salvar a rota?')" href="/deleteRotas"><i title="Excluir" class="material-icons center">close</i></a> 
+		</div>
+  	{% endif %}
+	<script src='https://d3js.org/d3.v3.min.js' charset='utf-8'></script>
+	<script type="text/javascript">
+		var transmissao = 0;
+		var distancia = 0;
+		var count = 0;
+		var xa = 0;
+		var ya = 0;
+		function transmitir(){
+			if (transmissao==0) {
+				document.getElementById('trans').innerHTML = '<i class="material-icons left">signal_wifi_off</i>Pausar';
+				document.getElementById('marcar').style.display='block';
+				document.getElementById('final').style.display='block';
+				transmissao=1;
+			}else{
+				document.getElementById('trans').innerHTML = '<i class="material-icons left">cast</i>Iniciar';
+				document.getElementById('marcar').style.display='none';
+				document.getElementById('final').style.display='none';
+				$.post('http://127.0.0.1:8000/distanciasR',{'dis_distancia':distancia,'dis_oni_codigo':{{codigo}}, 'csrfmiddlewaretoken': '{{csrf_token}}'});
+				transmissao=0;
+			}
+		}
+		var paradas = 0;
+		var x, y, data, data2;
+		var url = "{% url 'rotas_list' %}";
+
+		mapboxgl.accessToken = 'pk.eyJ1Ijoidml0b3IyMDAyIiwiYSI6ImNqc2c4bGc3YTEzeTMzeXRocjcwM2dtcHAifQ.--CXrRClPMLyE5Cdg8VgOg';
+		var map = new mapboxgl.Map({
+			container: 'map', // container id
+			style: 'mapbox://styles/mapbox/streets-v11',
+			center: [-37.0922198, -6.460246799999999], // starting position
+			zoom: 12, // starting zoom
+			minZoom: 12,
+			maxZoom: 18
+		});
+
+		function error(err) {
+	  		console.warn('ERRO(' + err.code + '): ' + err.message);
+		}
+
+		options = {
+	  		enableHighAccuracy: true,
+	  		timeout: 5000,
+	  		maximumAge: 0
+		};
+
+		function success(pos){
+			 if (transmissao==1) {
+				 var crd = pos.coords;
+				 x =  crd.longitude;
+				 y = crd.latitude;
+				 data = {'rot_x':x,'rot_y':y,'rot_oni_codigo':{{codigo}}, 'csrfmiddlewaretoken': '{{csrf_token}}'};
+				 $.post(url, data);
+				 data2 = {'cor_x': x,'cor_y':y,'cor_velocidade':0, 'cor_oni_codigo': {{ codigo }}, 'csrfmiddlewaretoken': '{{csrf_token}}'};
+				 $.post("{% url 'coordenadas_update' %}", data2);
+				 map.getSource('ponto').setData({
+				 	"type": "FeatureCollection",
+					"features": [{
+						"type": "Feature",
+						"geometry": {
+							"type": "Point",
+							"coordinates": [x, y]
+						}
+					}]
+				 });
+			}
+		}
+		
+		function parada(){
+				data2 = {'par_nome': 'Parada '+ (paradas+1),'par_x': x,'par_y':y, 'par_oni_codigo':{{codigo}},'par_distancia':0,'csrfmiddlewaretoken': '{{csrf_token}}'};
+				$.post("{% url 'paradas_list' %}", data2);
+				console.log(data2);
+				marcar=0;
+				paradas++;
+		}
+		
+		map.on('load', function(){
+			navigator.geolocation.getCurrentPosition(function (pos){
+				var crd = pos.coords;
+				x =  crd.longitude;
+				y = crd.latitude;
+				mapa();
+			}, error, options);
+			navigator.geolocation.watchPosition(success, error, options);
+			window.setTimeout("rota()", 5000);
+		});
+
+		function rota(){
+			d3.json("{% url 'rota_geojson' %}",  function(err, data) {	
+				map.addSource('trace1', { type: 'geojson', data:{"type": "LineString", "coordinates": data.coordinates}});
+				map.addLayer({
+					"id": "trace",
+					"type": "line",
+					"source": "trace1",
+					"paint": {
+						"line-color": "red",
+						"line-opacity": 1.0,
+						"line-width": 5
+					}
+				});
+			});
+		}
+
+		var size = 120;
+		var pulsingDot = {
+			width: size,
+			height: size,
+			data: new Uint8Array(size * size * 4),
+
+			onAdd: function() {
+				var canvas = document.createElement('canvas');
+				canvas.width = this.width;
+				canvas.height = this.height;
+				this.context = canvas.getContext('2d');
+			},
+
+			render: function() {
+				var duration = 1000;
+				var t = (performance.now() % duration) / duration;
+
+				var radius = size / 2 * 0.3;
+				var outerRadius = size / 2 * 0.7 * t + radius;
+				var context = this.context;
+
+				// draw outer circle
+				context.clearRect(0, 0, this.width, this.height);
+				context.beginPath();
+				context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2);
+				context.fillStyle = 'rgba(0, 127, 255,' + (1 - t) + ')';
+				context.fill();
+
+				// draw inner circle
+				context.beginPath();
+				context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2);
+				context.fillStyle = 'rgba(0, 127, 255, 1)';
+				context.strokeStyle = 'white';
+				context.lineWidth = 2 + 4 * (1 - t);
+				context.fill();
+				context.stroke();
+
+				// update this image's data with data from the canvas
+				this.data = context.getImageData(0, 0, this.width, this.height).data;
+
+				// keep the map repainting
+				map.triggerRepaint();
+
+			// return `true` to let the map know that the image was updated
+				return true;
+			}
+		};
+		function medirDistancia(lat1,lon1,lat2,lon2) {
+			var R = 6371; // km 
+			//has a problem with the .toRad() method below.
+			var x1 = lat2-lat1;
+			var dLat = x1.toRad();  
+			var x2 = lon2-lon1;
+			var dLon = x2.toRad();  
+			var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) * Math.sin(dLon/2) * Math.sin(dLon/2);  
+			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+			var d = R * c; 
+			return d;
+		}
+		function mapa() {
+			map.addImage('pulsing-dot', pulsingDot, { pixelRatio: 2 });
+			map.addSource('ponto', {type: 'geojson', 
+				data: {
+					"type": "FeatureCollection",
+						"features": [{
+							"type": "Feature",
+							"geometry": {
+								"type": "Point",
+								"coordinates": [x, y]
+							}
+					}]
+				}
+			});
+			map.addLayer({
+				"id": "points",
+				"type": "symbol",
+				"source": "ponto",
+				"layout": {
+					"icon-image": "pulsing-dot"
+				}
+			});
+			map.flyTo({
+				center:[x, y],
+				zoom: 14
+			});
+		}
+
+		function recentralizar(){
+			map.flyTo({
+				center:[x, y],
+				zoom: 12
+			});
+		}
+
+	</script>
+{% endblock %}
