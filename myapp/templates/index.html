@@ -182,7 +182,7 @@
 		var cores = ["red", "yellow", "purple", "blue", "green", "grey", "orange", "pink", "violet", "brown"];
 		var cor = -1;
 		var imagem;
-		map.loadImage("static/myapp/images/busao.png", function (error, image) {
+		map.loadImage("{% static 'myapp/images/busao.png' %}", function (error, image) {
 			if (error) throw error;
 			imagem = image;
 		});

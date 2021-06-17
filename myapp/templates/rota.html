@@ -35,7 +35,6 @@
 				document.getElementById('trans').innerHTML = '<i class="material-icons left">cast</i>Iniciar';
 				document.getElementById('marcar').style.display='none';
 				document.getElementById('final').style.display='none';
-				$.post('http://127.0.0.1:8000/distanciasR',{'dis_distancia':distancia,'dis_oni_codigo':{{codigo}}, 'csrfmiddlewaretoken': '{{csrf_token}}'});
 				transmissao=0;
 			}
 		}
